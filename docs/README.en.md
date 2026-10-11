@@ -1,4 +1,14 @@
-# PauseMic
+<p align="center">
+  <img src="assets/icon.png" width="128" alt="PauseMic icon">
+</p>
+
+<h1 align="center">PauseMic</h1>
+
+<p align="center"><b>A little quiet, right when you need it.</b></p>
+
+<p align="center">
+  <img src="assets/settings.png" width="340" alt="PauseMic settings window">
+</p>
 
 A native macOS menu bar utility from [hecara Factory](https://hecara.com), a project for practical, reliable little tools. [MIT licensed](../LICENSE).
 
@@ -8,7 +18,7 @@ PauseMic detects microphone input, saves the default system output volume, sets 
 
 Download the universal ZIP from [GitHub Releases](https://github.com/hecara/PauseMic/releases), extract it, and move PauseMic.app into Applications. Requires macOS **14.2+** on Apple Silicon or Intel. The first download is Developer ID signed but not yet Apple notarized; Gatekeeper may require an explicit Open Anyway confirmation in System Settings → Privacy & Security. GitHub Actions artifacts are ad-hoc signed by default.
 
-Open the menu bar microphone icon for settings. Closing settings keeps the utility running. Optional launch at login uses macOS login items; approval may be required in System Settings → General → Login Items. English, Simplified Chinese and system language are available.
+Open the menu bar sound-bars icon for the status and settings window (light and dark mode). The icon dims when automatic quiet is off and shows a dot while the microphone is in use. Closing settings keeps the utility running. Optional launch at login uses macOS login items; approval may be required in System Settings → General → Login Items. English, Simplified Chinese and system language are available.
 
 Updates are checked at launch and hourly while the app is running, with a catch-up check after waking when due. Manual checking is also available. Update prompts open the official release download page. Automatic checks can be disabled.
 

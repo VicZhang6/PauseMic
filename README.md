@@ -1,6 +1,14 @@
-# PauseMic
+<p align="center">
+  <img src="docs/assets/icon.png" width="128" alt="PauseMic 图标">
+</p>
 
-**开口那一刻，让声音安静下来。 / A little quiet, right when you need it.**
+<h1 align="center">PauseMic</h1>
+
+<p align="center"><b>开口那一刻，让声音安静下来。 / A little quiet, right when you need it.</b></p>
+
+<p align="center">
+  <img src="docs/assets/settings.png" width="340" alt="PauseMic 设置窗口 / Settings window">
+</p>
 
 PauseMic 是原生 macOS 菜单栏小工具。在 Codex、Claude Code 等工具中使用麦克风语音输入时，它会保存系统输出音量、将音量设为 **0**，并在麦克风空闲后恢复原音量。音乐、播客和视频继续播放。
 
@@ -10,10 +18,11 @@ A native macOS menu bar utility: save your system output volume, set it to **0**
 
 ## 功能
 
-- Swift、AppKit、Core Audio 原生实现，支持 macOS **14.2+**，提供 Apple Silicon / Intel 通用应用。
+- Swift、SwiftUI / AppKit、Core Audio 原生实现，支持 macOS **14.2+**，提供 Apple Silicon / Intel 通用应用。
 - 检测任意进程的音频输入使用状态，不录音，不申请麦克风或播放器自动化权限。
 - 麦克风空闲 **1.5 秒**后恢复，短暂间隙或其他进程仍在使用麦克风时保持音量为 0。
-- 菜单栏常驻；关闭设置窗口继续运行；支持登录时启动。
+- 菜单栏常驻；全新设计的设置窗口，支持浅色 / 深色模式；关闭窗口继续运行；支持登录时启动。
+- 菜单栏声波图标反映状态：自动静音关闭时变淡，麦克风使用中显示圆点。
 - 中文、英文，默认跟随系统语言，可即时切换。
 - 默认每小时检查一次 GitHub Release，并在启动、睡眠唤醒后按需要检查；支持手动检查。更新提示打开 Release 下载页面。
 - 按设备分别保存原音量，支持默认输出切换、手动调整优先、异常退出后的恢复记录。
@@ -22,7 +31,7 @@ A native macOS menu bar utility: save your system output volume, set it to **0**
 ## 安装与使用
 
 1. 在 [Releases](https://github.com/hecara/PauseMic/releases) 下载 `PauseMic-*-macOS-universal.zip`，解压后将 `PauseMic.app` 拖到“应用程序”。
-2. 打开应用，在菜单栏麦克风图标中查看状态和设置。首次启动显示设置窗口。
+2. 打开应用，在菜单栏声波图标中查看状态和设置。首次启动显示设置窗口。
 3. 根据需要开启“登录时启动”。macOS 如要求登录项审批，请在“系统设置 → 通用 → 登录项”中允许。
 4. 使用语音输入。结束后，系统输出音量会恢复为原值。
 
