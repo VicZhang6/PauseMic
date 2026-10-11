@@ -45,6 +45,7 @@ A native macOS menu bar utility: save your system output volume, set it to **0**
 需要 macOS 14.2+、Xcode 15.2+ / Swift 5.9+。
 
 ```sh
+scripts/install-hooks.sh
 swift test
 scripts/build-app.sh
 open dist/PauseMic.app
@@ -66,6 +67,20 @@ NOTARY_PROFILE='your-existing-profile' scripts/build-app.sh
 无签名参数时为 ad-hoc 签名。脚本打包通用 `.app`、ZIP 和 SHA-256 校验文件。Release tag 必须与 `Resources/Info.plist` 的版本一致。自动测试、构建和 tag 发布的 GitHub Actions 模板保存在 `docs/workflow-templates/`。当前发布凭据缺少 `workflow` 权限，尚未启用云端工作流；由本机完成验证和签名发布。具备相应权限后，可将模板复制到 `.github/workflows/` 启用。已有 Release 不会被该模板替换。
 
 [实施计划](docs/PLAN.md) · [验证记录](docs/VALIDATION.md) · [发布说明](docs/RELEASE.md)
+
+## 私钥上传保护
+
+签名使用本机钥匙串，不导出私钥；公证使用已有的 notarytool 钥匙串配置。仓库排除 `.p12`、`.pfx`、`.p8`、`.key`、`.pem` 以及本地 `.env` 凭据文件。
+
+运行 `scripts/install-hooks.sh` 安装本仓库的提交和推送检查：提交检查暂存区的实际内容，推送检查本地所有 Git 历史，防止“后来删除了私钥，但旧提交仍上传”。打包脚本在公证上传和生成 Release 包前检查应用包与 ZIP 内容；工作流模板也会在上传前检查明确指定的文件。
+
+```sh
+python3 -m unittest discover -s scripts -p 'test_*.py'
+python3 scripts/check-sensitive.py --history
+python3 scripts/check-sensitive.py --artifacts dist/PauseMic.app
+```
+
+检查发现敏感文件名、常见 PEM 私钥标记、未扫描的嵌套 ZIP 或超过扫描限制的文件时会停止，不打印密钥内容。公开证书 `.cer` 和应用中的公钥签名信息允许存在。新克隆需要安装钩子；本地钩子可被绕过，任意改名的二进制私钥、其他形式的凭据或手工上传不保证被识别，因此这些保护不能替代钥匙串和凭据管理。
 
 ## hecara Factory
 

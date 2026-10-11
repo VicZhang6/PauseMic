@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+# Include historical blobs: deleting a secret in a later commit does not remove it from history.
+exec python3 scripts/check-sensitive.py --history

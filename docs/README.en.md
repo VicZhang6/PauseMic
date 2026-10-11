@@ -32,6 +32,7 @@ No audio recording, microphone permission, Automation permission, audio uploads 
 macOS 14.2+, Xcode 15.2+ / Swift 5.9+:
 
 ```sh
+scripts/install-hooks.sh
 swift test
 scripts/build-app.sh
 open dist/PauseMic.app
@@ -46,3 +47,9 @@ PAUSEMIC_HARDWARE_TEST=1 swift test --filter NativeTests/testRealVolumeRoundTrip
 For signing and notarization, provide an existing Developer ID identity and existing notarytool keychain profile as `SIGNING_IDENTITY` and `NOTARY_PROFILE` to the build script. Without them, it uses ad-hoc signing. Build/test and tag-release workflow templates are included in `docs/workflow-templates/`. They are not enabled because the current publishing credential lacks the GitHub `workflow` scope; this release was tested, signed and published locally. With the appropriate workflow access, copy them into `.github/workflows/` to enable CI. Existing releases are never replaced automatically.
 
 [Implementation plan](PLAN.md) · [Validation](VALIDATION.md) · [Release notes](RELEASE.md)
+
+## Private-key upload protection
+
+Signing uses the local Keychain without exporting private keys. Install the repository hooks with `scripts/install-hooks.sh`: pre-commit scans staged blobs, while pre-push scans all local Git history, including files deleted in later commits. The build script checks bundles and ZIP contents before notarization upload and release packaging; workflow templates check explicit upload targets too. Checks block common signing-key filenames and PEM private-key content without printing secrets. Public `.cer` certificates and embedded public signature information remain allowed.
+
+Fresh clones need hook installation. Local hooks can be bypassed, and renamed binary keys, other credential formats or manual uploads are not guaranteed to be caught. Keep private signing material in the Keychain.

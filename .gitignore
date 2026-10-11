@@ -2,3 +2,20 @@
 dist/
 .DS_Store
 *.xcuserstate
+
+# Private signing material and local credentials; public .cer certificates are allowed.
+*.p12
+*.pfx
+*.p8
+*.key
+*.pem
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+.env
+.env.*
+!.env.example
+!.env.sample
+__pycache__/
+*.pyc

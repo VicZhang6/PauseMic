@@ -9,19 +9,26 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Validate release tag
         run: |
           VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)
           test "$GITHUB_REF_NAME" = "v$VERSION"
+      - run: python3 scripts/check-sensitive.py --history
+      - run: python3 -m unittest discover -s scripts -p "test_*.py"
       - run: swift test
       - run: scripts/build-app.sh
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)
+          ASSET="dist/PauseMic-${VERSION}-macOS-universal.zip"
+          python3 scripts/check-sensitive.py --artifacts "$ASSET" dist/SHA256SUMS.txt
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             echo "Release already exists; keeping the published assets."
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS.txt \
+            gh release create "$GITHUB_REF_NAME" "$ASSET" dist/SHA256SUMS.txt \
               --verify-tag --title "PauseMic $GITHUB_REF_NAME" --notes-file docs/RELEASE.md
           fi

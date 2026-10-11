@@ -10,11 +10,16 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/check-sensitive.py --history
+      - run: python3 -m unittest discover -s scripts -p "test_*.py"
       - run: swift test
       - run: scripts/build-app.sh
+      - run: python3 scripts/check-sensitive.py --artifacts dist/PauseMic-*-macOS-universal.zip dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: PauseMic-macOS-universal
           path: |
-            dist/*.zip
+            dist/PauseMic-*-macOS-universal.zip
             dist/SHA256SUMS.txt
