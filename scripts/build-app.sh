@@ -11,8 +11,11 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/PauseMic" "$APP/Contents/MacOS/PauseMic"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp -R Resources/en.lproj Resources/zh-Hans.lproj "$APP/Contents/Resources/"
-xcrun swift scripts/make-icon.swift .build/AppIcon.iconset
-iconutil -c icns .build/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
+rm -rf .build/icon && mkdir -p .build/icon
+xcrun actool Resources/PauseMic.icon --compile .build/icon --output-format human-readable-text --notices --warnings --errors \
+    --output-partial-info-plist .build/icon/partial.plist --app-icon PauseMic --include-all-app-icons \
+    --target-device mac --minimum-deployment-target 14.2 --platform macosx
+cp .build/icon/Assets.car .build/icon/PauseMic.icns "$APP/Contents/Resources/"
 if [[ -n "${SIGNING_IDENTITY:-}" ]]; then
     codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$APP"
 else

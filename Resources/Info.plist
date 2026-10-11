@@ -8,9 +8,10 @@
     <key>CFBundleName</key><string>PauseMic</string>
     <key>CFBundleDisplayName</key><string>PauseMic</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleShortVersionString</key><string>0.1.1</string>
     <key>CFBundleVersion</key><string>1</string>
-    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundleIconFile</key><string>PauseMic</string>
+    <key>CFBundleIconName</key><string>PauseMic</string>
     <key>LSMinimumSystemVersion</key><string>14.2</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>

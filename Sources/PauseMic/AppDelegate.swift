@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import ServiceManagement
 import PauseMicCore
 
@@ -9,10 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private var window: NSWindow?
     private var status = VolumeStatus(microphone: MicrophoneSample(active: nil, processCount: 0), quietCount: 0, savedVolume: nil, failure: nil)
     private var volumeFailure: VolumeFailure?
-    private var statusLabel: NSTextField?
-    private var detailLabel: NSTextField?
-    private var errorLabel: NSTextField?
-    private var updateLabel: NSTextField?
+    private let model = SettingsModel()
     private var loginError = ""
     private var enabled: Bool {
         get { UserDefaults.standard.bool(forKey: "enabled") }
@@ -55,6 +53,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if status.quietCount > 0 { return tr("Waiting to restore volume", "等待恢复音量") }
         return tr("Ready when you speak", "随时准备，安心开口")
     }
+    /// Template glyph: sound bars settling into a pause. Dimmed when automatic quiet is off; a dot marks microphone use.
+    private func menuBarImage(dimmed: Bool, inUse: Bool) -> NSImage {
+        let bars: [(x: CGFloat, w: CGFloat, y: CGFloat, h: CGFloat)] = [
+            (270, 115, 345, 590), (410, 110, 437, 416), (545, 107, 527, 246),
+            (676, 89, 587, 130), (803, 77, 515, 274), (908, 77, 515, 274)]
+        let scale: CGFloat = 15 / 590
+        let image = NSImage(size: NSSize(width: 22, height: 18), flipped: false) { _ in
+            NSColor.black.withAlphaComponent(dimmed ? 0.35 : 1).setFill()
+            for bar in bars {
+                let rect = NSRect(x: 1.5 + (bar.x - 270) * scale, y: 1.5 + (590 - (bar.y - 345) - bar.h) * scale,
+                                  width: bar.w * scale, height: bar.h * scale)
+                NSBezierPath(roundedRect: rect, xRadius: rect.width / 2, yRadius: rect.width / 2).fill()
+            }
+            if inUse { NSBezierPath(ovalIn: NSRect(x: 17.5, y: 12.5, width: 4.5, height: 4.5)).fill() }
+            return true
+        }
+        image.isTemplate = true; image.accessibilityDescription = statusText
+        return image
+    }
+    private var statusKind: StatusKind {
+        if status.microphone.active == nil { return .unavailable }
+        if !enabled { return .off }
+        if status.microphone.active == true { return .inUse }
+        return status.quietCount > 0 ? .waiting : .ready
+    }
     private var detailText: String {
         if status.quietCount > 0 {
             let volume = Int((status.savedVolume ?? 0) * 100)
@@ -63,13 +86,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         return tr("System output · restores after the microphone is idle for 1.5 seconds", "系统默认输出 · 麦克风空闲 1.5 秒后恢复原音量")
     }
     private func refreshStatus() {
-        let symbol = !enabled ? "mic.slash" : (status.microphone.active == true ? "mic.fill" : "mic")
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: statusText)
-        image?.isTemplate = true; statusItem?.button?.image = image
+        statusItem?.button?.image = menuBarImage(dimmed: !enabled, inUse: enabled && status.microphone.active == true)
         statusItem?.button?.toolTip = "PauseMic · \(statusText)"
-        statusLabel?.stringValue = statusText; detailLabel?.stringValue = detailText
-        updateLabel?.stringValue = updater.message
-        errorLabel?.stringValue = volumeFailure.map { error in
+        model.title = statusText; model.detail = detailText
+        model.kind = statusKind; model.enabled = enabled; model.canKeepQuiet = status.quietCount > 0
+        model.updateMessage = updater.message; model.autoUpdate = updater.automatic; model.language = AppLanguage.current
+        model.loginOn = SMAppService.mainApp.status == .enabled || SMAppService.mainApp.status == .requiresApproval
+        if case .checking = updater.state { model.checking = true } else { model.checking = false }
+        if case .available = updater.state { model.updateAvailable = true } else { model.updateAvailable = false }
+        model.error = volumeFailure.map { error in
             switch error {
             case .unsupported:
                 return tr("This output has no software volume control (for example, some HDMI or USB devices). Choose an output with adjustable system volume.", "当前输出设备不支持软件音量控制（例如部分 HDMI 或 USB 设备），请选择可调整系统音量的输出。")
@@ -115,95 +140,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     @objc private func toggleEnabled() {
         enabled.toggle(); volumeFailure = nil
         coordinator.setEnabled(enabled); refreshStatus()
-        if window?.isVisible == true { rebuildWindow() }
     }
-    @objc private func enabledChanged(_ sender: NSButton) { if (sender.state == .on) != enabled { toggleEnabled() } }
     @objc private func keepQuiet() { coordinator.keepQuiet() }
     @objc private func quit() { NSApp.terminate(nil) }
     @objc private func openFactory() { NSWorkspace.shared.open(URL(string: "https://hecara.com")!) }
     @objc private func openRepository() { NSWorkspace.shared.open(URL(string: "https://github.com/hecara/PauseMic")!) }
     @objc private func openRelease() { updater.openRelease() }
     @objc private func checkUpdates() { updater.check(); showSettings() }
-    @objc private func languageChanged(_ sender: NSPopUpButton) {
-        UserDefaults.standard.set(AppLanguage.allCases[sender.indexOfSelectedItem].rawValue, forKey: "language")
-        installMainMenu(); rebuildWindow(); refreshStatus()
+    private func setLanguage(_ language: AppLanguage) {
+        UserDefaults.standard.set(language.rawValue, forKey: "language")
+        installMainMenu(); window?.title = tr("PauseMic Settings", "PauseMic 设置"); refreshStatus()
     }
-    @objc private func automaticUpdatesChanged(_ sender: NSButton) {
-        updater.automatic = sender.state == .on
+    private func setAutomaticUpdates(_ on: Bool) {
+        updater.automatic = on
         UserDefaults.standard.set(updater.automatic, forKey: "automaticUpdates")
         if updater.automatic { updater.check() }
+        refreshStatus()
     }
-    @objc private func loginChanged(_ sender: NSButton) {
+    private func setLogin(_ on: Bool) {
         do {
-            if sender.state == .on { try SMAppService.mainApp.register() }
+            if on { try SMAppService.mainApp.register() }
             else { try SMAppService.mainApp.unregister() }
             loginError = SMAppService.mainApp.status == .requiresApproval ?
                 tr("Allow PauseMic in System Settings → General → Login Items.", "请在系统设置 → 通用 → 登录项中允许 PauseMic。") : ""
         } catch {
             loginError = tr("Could not change login item. Install PauseMic in Applications and try again.", "无法更改登录项。请将 PauseMic 放入应用程序文件夹后重试。")
         }
-        sender.state = SMAppService.mainApp.status == .enabled || SMAppService.mainApp.status == .requiresApproval ? .on : .off
         refreshStatus()
     }
     @objc private func showSettings() {
         if window == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 680),
-                                  styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+            model.version = updater.version
+            model.onEnabled = { [weak self] want in if let self, want != self.enabled { self.toggleEnabled() } }
+            model.onLogin = { [weak self] in self?.setLogin($0) }
+            model.onAutoUpdate = { [weak self] in self?.setAutomaticUpdates($0) }
+            model.onLanguage = { [weak self] in self?.setLanguage($0) }
+            model.onKeepQuiet = { [weak self] in self?.keepQuiet() }
+            model.onCheck = { [weak self] in self?.updater.check() }
+            model.onRelease = { [weak self] in self?.openRelease() }
+            model.onFactory = { [weak self] in self?.openFactory() }
+            model.onRepository = { [weak self] in self?.openRepository() }
+            let controller = NSHostingController(rootView: SettingsView(model: model))
+            controller.sizingOptions = [.preferredContentSize]
+            let window = NSWindow(contentViewController: controller)
+            window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+            window.titlebarAppearsTransparent = true; window.titleVisibility = .hidden
+            window.isMovableByWindowBackground = true
+            window.title = tr("PauseMic Settings", "PauseMic 设置")
             window.isReleasedWhenClosed = false; window.delegate = self
-            window.center(); self.window = window; rebuildWindow()
+            window.center(); self.window = window
         }
         refreshStatus(); window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
-    }
-    private func label(_ text: String, size: CGFloat = 13, color: NSColor = .labelColor, weight: NSFont.Weight = .regular) -> NSTextField {
-        let label = NSTextField(wrappingLabelWithString: text)
-        label.font = .systemFont(ofSize: size, weight: weight); label.textColor = color
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }
-    private func button(_ title: String, action: Selector) -> NSButton {
-        let button = NSButton(title: title, target: self, action: action); button.bezelStyle = .rounded; return button
-    }
-    private func checkbox(_ title: String, on: Bool, action: Selector) -> NSButton {
-        let button = NSButton(checkboxWithTitle: title, target: self, action: action); button.state = on ? .on : .off; return button
-    }
-    private func rebuildWindow() {
-        guard let window else { return }
-        window.title = tr("PauseMic Settings", "PauseMic 设置")
-        let content = NSView(); window.contentView = content
-        let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 16
-        stack.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
-            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 28),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -24)
-        ])
-        func add(_ view: NSView) {
-            stack.addArrangedSubview(view)
-            if view is NSTextField { view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true }
-        }
-        add(label("PauseMic", size: 30, weight: .bold))
-        add(label(tr("A little quiet, right when you need it.", "开口那一刻，让声音安静下来。"), size: 15, color: .secondaryLabelColor))
-        let stateLabel = label(statusText, size: 19, weight: .semibold); add(stateLabel); statusLabel = stateLabel
-        let detail = label(detailText, color: .secondaryLabelColor); add(detail); detailLabel = detail
-        add(checkbox(tr("Set system output volume to 0 while the microphone is in use", "麦克风使用时，将系统输出音量设为 0"), on: enabled, action: #selector(enabledChanged)))
-        add(checkbox(tr("Launch at login", "登录时启动"), on: SMAppService.mainApp.status == .enabled || SMAppService.mainApp.status == .requiresApproval, action: #selector(loginChanged)))
-        add(checkbox(tr("Check GitHub Releases every hour", "每小时检查 GitHub Release 更新"), on: updater.automatic, action: #selector(automaticUpdatesChanged)))
-        let languages = NSPopUpButton(); languages.addItems(withTitles: [tr("System language", "跟随系统"), "English", "简体中文"])
-        languages.selectItem(at: AppLanguage.allCases.firstIndex(of: AppLanguage.current)!)
-        languages.target = self; languages.action = #selector(languageChanged)
-        let row = NSStackView(views: [label(tr("Language", "语言")), languages]); row.spacing = 16; add(row)
-        add(button(tr("Keep volume at 0 · cancel restoration", "保持音量为 0 · 取消自动恢复"), action: #selector(keepQuiet)))
-        let errors = label("", size: 12, color: .systemOrange); add(errors); errorLabel = errors
-        add(label(tr("Media keeps playing. PauseMic saves your output volume, sets it to 0, then restores it. A detected manual volume or mute change cancels restoration for that output.",
-                     "媒体继续播放。PauseMic 保存输出音量、设为 0，再恢复原音量。检测到手动调节音量或静音后，会放弃恢复该设备的音量。"), size: 12, color: .secondaryLabelColor))
-        add(label(tr("No recording or audio uploads. Closing this window keeps PauseMic in the menu bar. Disabling or quitting restores volume still owned by PauseMic.",
-                     "不录音，不上传音频。关闭窗口后继续在菜单栏运行。关闭自动静音或退出时，会恢复仍由 PauseMic 管理的音量。"), size: 12, color: .secondaryLabelColor))
-        let update = label(updater.message, size: 12, color: .secondaryLabelColor); add(update); updateLabel = update
-        let updateRow = NSStackView(views: [button(tr("Check now", "立即检查"), action: #selector(checkUpdates)), button(tr("Releases ↗", "下载更新 ↗"), action: #selector(openRelease))]); updateRow.spacing = 12; add(updateRow)
-        add(label(tr("A hecara Factory project · Practical, reliable little tools.", "hecara Factory 工厂计划 · 提供实用可靠的小工具。"), size: 12, color: .secondaryLabelColor))
-        let footer = NSStackView(views: [button("hecara.com ↗", action: #selector(openFactory)), button("GitHub · MIT ↗", action: #selector(openRepository)), label("v\(updater.version)", size: 11, color: .tertiaryLabelColor)])
-        footer.spacing = 12; add(footer)
-        refreshStatus()
     }
 }

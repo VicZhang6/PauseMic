@@ -1,3 +1,14 @@
+## PauseMic 0.1.1
+
+界面与图标全面焕新 / Redesigned settings window and new app icon.
+
+- 全新设置窗口：状态卡片、分组设置、更新与工作方式说明，支持浅色与深色模式。
+- Redesigned settings window: status card, grouped settings, update and how-it-works sections, light and dark mode.
+- 全新应用图标与菜单栏图标；自动静音关闭时图标变淡，麦克风使用中显示圆点。
+- New app icon and menu bar glyph; dimmed when automatic quiet is off, with a dot while the microphone is in use.
+- 功能与音量逻辑无变化。
+- No change to volume-handling behavior.
+
 ## PauseMic 0.1.0
 
 首个原生 macOS 版本 / First native macOS release.
