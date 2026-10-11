@@ -11,6 +11,9 @@ Validated locally on 2026-10-11 with Apple Silicon, Swift 6.4 / Xcode 27. The de
 - Bundle Info.plist and localized resources validated. The Automation usage description and all player scripting were removed.
 - Developer ID signature, secure timestamp, hardened runtime, and strict bundle signature verification succeeded for the initial local release build.
 - Native settings opened with English strings; Chinese settings layout inspected visually. Menu/application text updates with language choice.
+- After publishing v0.1.0, the running app checked the real GitHub latest-release endpoint and displayed the localized “up to date” result.
+- The published ZIP SHA-256 digest matches the local signed build.
+- Normal application quit was verified with no remaining PauseMic process or pending restoration receipts.
 - Native window close/reopen checked; the application retains its menu bar lifecycle after closing settings. No login preference was changed during validation.
 
 The real volume round-trip test restored the exact original scalar value and left the hardware mute state unchanged.
