@@ -94,3 +94,7 @@ python3 scripts/check-sensitive.py --artifacts dist/PauseMic.app
 ## hecara Factory
 
 PauseMic 是 [hecara Factory 工厂计划](https://hecara.com) 的开源项目，旨在提供**实用可靠的小工具**。源代码使用 [MIT 协议](LICENSE)，欢迎反馈设备兼容性、提交 Issue 和 Pull Request。
+
+## 社区
+
+本开源项目已链接并认可 [LINUX DO](https://linux.do/) 社区。
